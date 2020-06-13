@@ -16,5 +16,10 @@ namespace TwitchLib.PubSub.Events
         /// Number of viewers at current time.
         /// </summary>
         public int Viewers;
+
+        /// <summary>
+        /// Property for channel's ID.
+        /// </summary>
+        public string ChannelId;
     }
 }

@@ -233,18 +233,19 @@ namespace TwitchLib.PubSub
         /// Fires when PubSub receives notice that the stream is playing a commercial.
         /// </summary>
         public event EventHandler<OnCommercialArgs> OnCommercial;
+
+        public event EventHandler<OnWatchPartyVodArgs> OnWatchPartyVod;
         #endregion
 
         /// <summary>
         /// Constructor for a client that interface's with Twitch's PubSub system.
         /// </summary>
         /// <param name="logger">Optional ILogger param to enable logging</param>
-        public TwitchPubSub(ILogger<TwitchPubSub> logger = null)
+        public TwitchPubSub(ILogger<TwitchPubSub> logger = null, WebSocketClient webSocketClient = null)
         {
             _logger = logger;
 
-            var options = new ClientOptions { ClientType = ClientType.PubSub };
-            _socket = new WebSocketClient(options);
+            _socket = webSocketClient ?? new WebSocketClient(new ClientOptions { ClientType = ClientType.PubSub });
 
             _socket.OnConnected += Socket_OnConnected;
             _socket.OnError += OnError;
@@ -457,20 +458,24 @@ namespace TwitchLib.PubSub
                             OnChannelExtensionBroadcast?.Invoke(this, new OnChannelExtensionBroadcastArgs { Messages = cEB.Messages, ChannelId = channelId });
                             return;
                         case "video-playback":
+                        case "video-playback-by-id":
                             var vP = msg.MessageData as VideoPlayback;
                             switch (vP?.Type)
                             {
                                 case VideoPlaybackType.StreamDown:
-                                    OnStreamDown?.Invoke(this, new OnStreamDownArgs { ServerTime = vP.ServerTime });
+                                    OnStreamDown?.Invoke(this, new OnStreamDownArgs { ChannelId = channelId, ServerTime = vP.ServerTime });
                                     return;
                                 case VideoPlaybackType.StreamUp:
-                                    OnStreamUp?.Invoke(this, new OnStreamUpArgs { PlayDelay = vP.PlayDelay, ServerTime = vP.ServerTime });
+                                    OnStreamUp?.Invoke(this, new OnStreamUpArgs { ChannelId = channelId, PlayDelay = vP.PlayDelay, ServerTime = vP.ServerTime });
                                     return;
                                 case VideoPlaybackType.ViewCount:
-                                    OnViewCount?.Invoke(this, new OnViewCountArgs { ServerTime = vP.ServerTime, Viewers = vP.Viewers });
+                                    OnViewCount?.Invoke(this, new OnViewCountArgs { ChannelId = channelId, ServerTime = vP.ServerTime, Viewers = vP.Viewers });
                                     return;
                                 case VideoPlaybackType.Commercial:
-                                    OnCommercial?.Invoke(this, new OnCommercialArgs { ServerTime = vP.ServerTime, Length = vP.Length });
+                                    OnCommercial?.Invoke(this, new OnCommercialArgs { ChannelId = channelId, ServerTime = vP.ServerTime, Length = vP.Length });
+                                    return;
+                                case VideoPlaybackType.WatchPartyVod:
+                                    OnWatchPartyVod?.Invoke(this, new OnWatchPartyVodArgs { ChannelId = channelId, WpId = vP.WpId, WpType = vP.WpType, IncrementUrl = vP.IncrementUrl, VodId = vP.VodId, Title = vP.Title, BroadcastType = vP.BroadcastType, Viewable = vP.Viewable });
                                     return;
                             }
                             break;
@@ -686,6 +691,18 @@ namespace TwitchLib.PubSub
         public void ListenToVideoPlayback(string channelName)
         {
             ListenToTopic($"video-playback.{channelName}");
+        }
+
+        /// <inheritdoc />
+        /// <summary>
+        /// Sends request to listenOn video playback events in specific channel
+        /// </summary>
+        /// <param name="channelName">Name of channel to listen to playback events in.</param>
+        public void ListenToVideoPlaybackById(string channelId)
+        {
+            var topic = $"video-playback-by-id.{channelId}";
+            ListenToTopic(topic);
+            _topicToChannelId[topic] = channelId;
         }
 
         /// <inheritdoc />

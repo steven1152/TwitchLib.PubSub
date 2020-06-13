@@ -5,6 +5,7 @@
     /// </summary>
     public enum VideoPlaybackType
     {
+        Unknown,
         /// <summary>
         /// On stream up
         /// </summary>
@@ -20,6 +21,10 @@
         /// <summary>
         /// On commercial
         /// </summary>
-        Commercial
+        Commercial,
+        /// <summary>
+        /// On Watch Party VOD (Rerun)
+        /// </summary>
+        WatchPartyVod
     }
 }

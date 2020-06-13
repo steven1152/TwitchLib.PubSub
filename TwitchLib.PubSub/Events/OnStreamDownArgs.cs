@@ -12,5 +12,10 @@ namespace TwitchLib.PubSub.Events
         /// Property representing the server time of event.
         /// </summary>
         public string ServerTime;
+
+        /// <summary>
+        /// Property for channel's ID.
+        /// </summary>
+        public string ChannelId;
     }
 }
